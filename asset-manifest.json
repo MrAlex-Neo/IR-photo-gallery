@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/IR-photo-gallery/static/css/main.29866655.css",
+    "main.js": "/IR-photo-gallery/static/js/main.6567f0b2.js",
+    "static/js/453.16c10a1e.chunk.js": "/IR-photo-gallery/static/js/453.16c10a1e.chunk.js",
+    "index.html": "/IR-photo-gallery/index.html",
+    "main.29866655.css.map": "/IR-photo-gallery/static/css/main.29866655.css.map",
+    "main.6567f0b2.js.map": "/IR-photo-gallery/static/js/main.6567f0b2.js.map",
+    "453.16c10a1e.chunk.js.map": "/IR-photo-gallery/static/js/453.16c10a1e.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.29866655.css",
+    "static/js/main.6567f0b2.js"
+  ]
+}
