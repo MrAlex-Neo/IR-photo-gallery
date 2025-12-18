@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/IR-photo-gallery/static/css/main.29866655.css",
-    "main.js": "/IR-photo-gallery/static/js/main.e315f6b5.js",
+    "main.css": "/IR-photo-gallery/static/css/main.429ad8ca.css",
+    "main.js": "/IR-photo-gallery/static/js/main.b28d8149.js",
     "static/js/453.16c10a1e.chunk.js": "/IR-photo-gallery/static/js/453.16c10a1e.chunk.js",
     "index.html": "/IR-photo-gallery/index.html",
-    "main.29866655.css.map": "/IR-photo-gallery/static/css/main.29866655.css.map",
-    "main.e315f6b5.js.map": "/IR-photo-gallery/static/js/main.e315f6b5.js.map",
+    "main.429ad8ca.css.map": "/IR-photo-gallery/static/css/main.429ad8ca.css.map",
+    "main.b28d8149.js.map": "/IR-photo-gallery/static/js/main.b28d8149.js.map",
     "453.16c10a1e.chunk.js.map": "/IR-photo-gallery/static/js/453.16c10a1e.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.29866655.css",
-    "static/js/main.e315f6b5.js"
+    "static/css/main.429ad8ca.css",
+    "static/js/main.b28d8149.js"
   ]
 }
