@@ -4,6 +4,8 @@ export interface PhotoData {
   pid: number;
   points: number;
   data_time: string;
+  original_width?: number;
+  original_height?: number;
 }
 
 export interface ApiResponse {
@@ -19,4 +21,7 @@ export interface GridCell {
   col: number;
   width: number;
   height: number;
+  isCentered?: boolean;
+  centerX?: number;
+  centerY?: number;
 }

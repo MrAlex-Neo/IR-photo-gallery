@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/img-redundant-alt */
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { fetchPhotos, getImageUrl } from "../services/api";
 import { calculateAspectAwareLayout } from "../utils/bestFitCalculator";
@@ -20,8 +21,10 @@ const PhotoCanvas: React.FC = () => {
 
   // Режим работы: "test" или "real"
   const [mode, setMode] = useState<"test" | "real">("real");
-
   const [showStat, setShowStat] = useState(false);
+
+  // Состояния для анимаций
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Состояния для ТЕСТОВОГО режима
   const [allAvailablePhotos, setAllAvailablePhotos] = useState<PhotoData[]>([]);
@@ -35,8 +38,11 @@ const PhotoCanvas: React.FC = () => {
   const simulateProgressiveLoading = () => {
     if (currentIndex < allAvailablePhotos.length) {
       const nextPhoto = allAvailablePhotos[currentIndex];
+      setIsTransitioning(true);
       setPhotos((prev) => [...prev, nextPhoto]);
       setCurrentIndex((prev) => prev + 1);
+
+      setTimeout(() => setIsTransitioning(false), 700);
     } else {
       console.log("Все тестовые фотографии загружены.");
     }
@@ -76,16 +82,14 @@ const PhotoCanvas: React.FC = () => {
       return;
     }
 
-    const intervalId = setInterval(simulateProgressiveLoading, 1000);
+    const intervalId = setInterval(simulateProgressiveLoading, 2000);
     return () => clearInterval(intervalId);
   }, [mode, allAvailablePhotos, currentIndex]);
 
   // ========== РЕАЛЬНЫЙ РЕЖИМ ==========
-  // Основная функция загрузки новых фото с защитой от дублирования
   const loadNewPhotos = useCallback(async () => {
     if (mode !== "real") return;
 
-    // Если запрос уже выполняется, пропускаем
     if (isRequestInProgress.current) {
       console.log("Запрос уже выполняется, пропускаем...");
       return;
@@ -97,7 +101,7 @@ const PhotoCanvas: React.FC = () => {
 
       const newPhotos = await fetchPhotos();
       console.log("Получено фото с сервера:", newPhotos.length);
-      setLastUpdateTime(new Date());
+
       setPhotos((prev) => {
         const existingIds = new Set(prev.map((p) => p.pid));
         const uniqueNewPhotos = newPhotos.filter(
@@ -106,18 +110,26 @@ const PhotoCanvas: React.FC = () => {
 
         if (uniqueNewPhotos.length > 0) {
           console.log(`Добавлено ${uniqueNewPhotos.length} новых фото`);
-          setLastUpdateTime(new Date());
-          return [...prev, ...uniqueNewPhotos];
+
+          // Только добавляем новые фото, не перезаписываем старые
+          const updatedPhotos = [...prev, ...uniqueNewPhotos];
+
+          // Ограничиваем общее количество фото
+          const maxPhotos = 9999999; // Можно увеличить лимит
+          const finalList = updatedPhotos.slice(-maxPhotos);
+
+          return finalList;
         } else {
           console.log("Новых фото не обнаружено");
-          return prev;
+          return prev; // Возвращаем предыдущие фото без изменений
         }
       });
+
+      setLastUpdateTime(new Date());
     } catch (error) {
       console.error("Ошибка загрузки фото:", error);
     } finally {
       isRequestInProgress.current = false;
-      setLoading(false);
     }
   }, [mode]);
 
@@ -129,8 +141,11 @@ const PhotoCanvas: React.FC = () => {
       try {
         console.log("Инициализация реального режима...");
         const initialPhotos = await fetchPhotos();
+
+        // В реальном режиме показываем ВСЕ фото сразу
         setPhotos(initialPhotos);
         setLoading(false);
+
         console.log(
           `Режим реального времени: загружено ${initialPhotos.length} фото`
         );
@@ -144,10 +159,9 @@ const PhotoCanvas: React.FC = () => {
     initRealMode();
   }, [mode]);
 
-  // ЕДИНСТВЕННЫЙ интервал для реального режима (каждые 2 секунды)
+  // ЕДИНСТВЕННЫЙ интервал для реального режима
   useEffect(() => {
     if (mode !== "real") {
-      // Очищаем все таймауты при смене режима
       if (requestTimeoutRef.current) {
         clearTimeout(requestTimeoutRef.current);
         requestTimeoutRef.current = null;
@@ -161,18 +175,15 @@ const PhotoCanvas: React.FC = () => {
     const updateCountdownAndLoad = () => {
       setUpdateCountdown((prev) => {
         if (prev <= 1) {
-          // Когда счётчик достигает 1, делаем запрос
           loadNewPhotos();
-          return 2; // Сбрасываем на 2
+          return 2;
         }
         return prev - 1;
       });
     };
 
-    // Запускаем интервал
     const intervalId = setInterval(updateCountdownAndLoad, 1000);
 
-    // Очистка при размонтировании
     return () => {
       console.log("Очищаем интервал реального режима");
       clearInterval(intervalId);
@@ -182,7 +193,7 @@ const PhotoCanvas: React.FC = () => {
       }
       isRequestInProgress.current = false;
     };
-  }, [mode, loadNewPhotos]); // Зависимость от loadNewPhotos
+  }, [mode, loadNewPhotos]);
 
   // ========== ОБЩИЕ ФУНКЦИИ ==========
   // Отслеживание размера контейнера
@@ -195,8 +206,6 @@ const PhotoCanvas: React.FC = () => {
     };
 
     updateSize();
-
-    // Дебаунс для resize
     let resizeTimeout: NodeJS.Timeout;
     const handleResize = () => {
       clearTimeout(resizeTimeout);
@@ -210,32 +219,34 @@ const PhotoCanvas: React.FC = () => {
     };
   }, []);
 
-  // Загрузка из localStorage
-  useEffect(() => {
-    const savedPhotos = localStorage.getItem("cachedPhotos");
-    if (savedPhotos) {
-      try {
-        const parsed = JSON.parse(savedPhotos);
-        setPhotos(parsed);
-      } catch (e) {
-        console.error("Failed to parse cached photos:", e);
-      }
-    }
-  }, []);
-
-  // Сохранение в localStorage
-  useEffect(() => {
-    if (photos.length > 0) {
-      localStorage.setItem("cachedPhotos", JSON.stringify(photos));
-    }
-  }, [photos]);
-
   // Расчет сетки
   const gridLayout = calculateAspectAwareLayout(
     photos,
     containerSize.width,
     containerSize.height
   );
+
+  const handleModeChange = (newMode: "test" | "real") => {
+    if (newMode === mode) return;
+
+    console.log(`Смена режима с ${mode} на ${newMode}`);
+
+    if (requestTimeoutRef.current) {
+      clearTimeout(requestTimeoutRef.current);
+      requestTimeoutRef.current = null;
+    }
+    isRequestInProgress.current = false;
+
+    if (newMode === "test") {
+      setPhotos([]);
+      setCurrentIndex(0);
+      setAllAvailablePhotos([]);
+    }
+
+    setUpdateCountdown(2);
+    setLoading(true);
+    setMode(newMode);
+  };
 
   // Форматирование времени
   const formatTime = (date: Date) => {
@@ -244,32 +255,6 @@ const PhotoCanvas: React.FC = () => {
       minute: "2-digit",
       second: "2-digit",
     });
-  };
-
-  // Функция смены режима с очисткой
-  const handleModeChange = (newMode: "test" | "real") => {
-    if (newMode === mode) return;
-
-    console.log(`Смена режима с ${mode} на ${newMode}`);
-
-    // Очищаем состояние
-    if (requestTimeoutRef.current) {
-      clearTimeout(requestTimeoutRef.current);
-      requestTimeoutRef.current = null;
-    }
-    isRequestInProgress.current = false;
-
-    // Очищаем фото при переключении в тестовый режим
-    if (newMode === "test") {
-      setPhotos([]);
-      setCurrentIndex(0);
-      setAllAvailablePhotos([]);
-    }
-
-    // Сбрасываем счетчик
-    setUpdateCountdown(2);
-    setLoading(true);
-    setMode(newMode);
   };
 
   if (loading) {
@@ -294,6 +279,17 @@ const PhotoCanvas: React.FC = () => {
           const layout = gridLayout[index];
           if (!layout) return null;
 
+          // Определяем, нужно ли использовать object-fit: contain (без кропа)
+          const shouldUseContain = photos.length >= 1 && photos.length <= 4;
+
+          // Рассчитываем вертикальное центрирование для 1-4 фото
+          let top = layout.row * layout.height;
+          if (photos.length >= 1 && photos.length <= 4) {
+            const usedHeight = layout.height;
+            const availableHeight = containerSize.height;
+            top = (availableHeight - usedHeight) / 2;
+          }
+
           return (
             <div
               key={`${photo.pid}-${index}`}
@@ -301,11 +297,14 @@ const PhotoCanvas: React.FC = () => {
               style={{
                 position: "absolute",
                 left: `${layout.col * layout.width}px`,
-                top: `${layout.row * layout.height}px`,
+                top: `${top}px`,
                 width: `${layout.width}px`,
                 height: `${layout.height}px`,
                 overflow: "hidden",
                 transition: "all 0.5s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <img
@@ -314,9 +313,10 @@ const PhotoCanvas: React.FC = () => {
                 style={{
                   width: "100%",
                   height: "100%",
-                  objectFit: "cover",
+                  objectFit: shouldUseContain ? "contain" : "cover",
                   objectPosition: "center",
                   display: "block",
+                  backgroundColor: "#000",
                 }}
                 onError={(e) => {
                   console.error(`Failed to load image: ${photo.fn}`);
@@ -430,9 +430,11 @@ const PhotoCanvas: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    const count = Math.min(5, allAvailablePhotos.length);
+                    const count = Math.min(4, allAvailablePhotos.length);
                     setPhotos(allAvailablePhotos.slice(0, count));
                     setCurrentIndex(count);
+                    setIsTransitioning(true);
+                    setTimeout(() => setIsTransitioning(false), 700);
                   }}
                   style={{
                     padding: "6px 12px",
@@ -443,9 +445,9 @@ const PhotoCanvas: React.FC = () => {
                     cursor: "pointer",
                     fontSize: "12px",
                   }}
-                  title="Показать 5 фото"
+                  title="Показать 4 фото"
                 >
-                  5 фото
+                  4 фото
                 </button>
                 <button
                   onClick={() => {
@@ -517,29 +519,22 @@ const PhotoCanvas: React.FC = () => {
               Режим: <strong>{mode === "test" ? "ТЕСТ" : "РЕАЛЬНЫЙ"}</strong>
             </div>
             <div>
-              Фото на экране: <strong>{photos.length}</strong>
+              Фото: <strong>{photos.length}</strong>
             </div>
-            {mode === "test" && currentIndex < allAvailablePhotos.length && (
-              <div
-                style={{ fontSize: "10px", color: "#4dabf7", marginTop: "4px" }}
-              >
-                Следующее фото через:{" "}
-                {currentIndex < allAvailablePhotos.length
-                  ? "1 сек"
-                  : "завершено"}
-              </div>
-            )}
-            {mode === "real" && (
-              <div
-                style={{ fontSize: "10px", color: "#adb5bd", marginTop: "4px" }}
-              >
-                {isRequestInProgress.current ? (
-                  <span style={{ color: "#4dabf7" }}>Загрузка...</span>
-                ) : (
-                  `Обновление через: ${updateCountdown} сек`
-                )}
-              </div>
-            )}
+            <div
+              style={{ fontSize: "10px", color: "#4dabf7", marginTop: "4px" }}
+            >
+              Высота:{" "}
+              {photos.length === 1
+                ? "80%"
+                : photos.length === 2
+                ? "70%"
+                : photos.length === 3
+                ? "80%"
+                : photos.length === 4
+                ? "80%"
+                : "100%"}
+            </div>
           </div>
         </>
       )}

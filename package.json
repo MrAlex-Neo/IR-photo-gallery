@@ -1,6 +1,7 @@
 {
   "name": "photo-gallery",
   "version": "0.1.0",
+  "homepage": "https://MrAlex-Neo.github.io/IR-photo-gallery",
   "private": true,
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
@@ -11,6 +12,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "axios": "^1.13.2",
+    "gh-pages": "^6.3.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-scripts": "5.0.1",
@@ -18,10 +20,10 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "build": "react-scripts build"
   },
   "eslintConfig": {
     "extends": [
